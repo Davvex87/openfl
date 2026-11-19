@@ -1367,6 +1367,23 @@ class Stage extends DisplayObjectContainer #if lime implements IModule #end
 		}
 	}
 
+	#if (lime_cffi && !macro)
+	/**
+		The window whose context is current: the one rendering now, or else the main window,
+		whose context Lime keeps current outside of rendering.
+	**/
+	@:noCompletion private function __getCurrentGLWindow():Window
+	{
+		for (other in window.application.windows)
+		{
+			var otherWindow = Std.downcast(other, openfl.display.Window);
+			if (otherWindow != null && otherWindow.stage != null && otherWindow.stage.__rendering) return other;
+		}
+
+		return window.application.window;
+	}
+	#end
+
 	@:noCompletion private function __createRenderer():Void
 	{
 		#if lime
@@ -1377,6 +1394,12 @@ class Stage extends DisplayObjectContainer #if lime implements IModule #end
 		{
 			case OPENGL, OPENGLES, WEBGL:
 				#if (!disable_cffi && (!html5 || !canvas))
+				#if (lime_cffi && !macro)
+				// Outside of a window's rendering, Lime keeps another window's context current. The
+				// renderer sets GL state as it is made and remembers it as set, so make it in this one's
+				var currentGLWindow = __getCurrentGLWindow();
+				if (currentGLWindow != window) @:privateAccess window.__backend.contextMakeCurrent();
+				#end
 				context3D = new Context3D(this);
 				#if openfl_dpi_aware
 				context3D.configureBackBuffer(windowWidth, windowHeight, 0, true, true, true);
@@ -1387,6 +1410,9 @@ class Stage extends DisplayObjectContainer #if lime implements IModule #end
 				#end
 				context3D.present();
 				__renderer = new OpenGLRenderer(context3D);
+				#if (lime_cffi && !macro)
+				if (currentGLWindow != window && currentGLWindow != null) @:privateAccess currentGLWindow.__backend.contextMakeCurrent();
+				#end
 				#end
 
 			case CANVAS:

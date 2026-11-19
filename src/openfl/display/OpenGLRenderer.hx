@@ -70,9 +70,6 @@ class OpenGLRenderer extends DisplayObjectRenderer
 	@SuppressWarnings("checkstyle:Dynamic")
 	public var gl:#if lime WebGLRenderContext #else Dynamic #end;
 
-	@:noCompletion private static var __staticDefaultDisplayShader:DisplayObjectShader;
-	@:noCompletion private static var __staticDefaultGraphicsShader:GraphicsShader;
-	@:noCompletion private static var __staticMaskShader:Context3DMaskShader;
 
 	@:noCompletion private var __context3D:Context3D;
 	@:noCompletion private var __clipRects:Array<Rectangle>;
@@ -163,18 +160,20 @@ class OpenGLRenderer extends DisplayObjectRenderer
 		__stencilReference = 0;
 		__tempRect = new Rectangle();
 
-		if (__staticDefaultDisplayShader == null) __staticDefaultDisplayShader = new DisplayObjectShader();
-		if (__staticDefaultGraphicsShader == null) __staticDefaultGraphicsShader = new GraphicsShader();
-		if (__staticMaskShader == null) __staticMaskShader = new Context3DMaskShader();
+		// A shader draws through the Context3D it was set up with, so renderers share default
+		// shaders only with others of the same Context3D, not with those of other windows
+		if (context.__defaultDisplayShader == null) context.__defaultDisplayShader = new DisplayObjectShader();
+		if (context.__defaultGraphicsShader == null) context.__defaultGraphicsShader = new GraphicsShader();
+		if (context.__defaultMaskShader == null) context.__defaultMaskShader = new Context3DMaskShader();
 
-		__defaultDisplayShader = __staticDefaultDisplayShader;
-		__defaultGraphicsShader = __staticDefaultGraphicsShader;
+		__defaultDisplayShader = context.__defaultDisplayShader;
+		__defaultGraphicsShader = context.__defaultGraphicsShader;
 		__defaultShader = __defaultDisplayShader;
 
 		__initShader(__defaultShader);
 
 		__scrollRectMasks = new ObjectPool<Shape>(function() return new Shape());
-		__maskShader = __staticMaskShader;
+		__maskShader = context.__defaultMaskShader;
 	}
 
 	/**
@@ -538,10 +537,10 @@ class OpenGLRenderer extends DisplayObjectRenderer
 	{
 		if (shader != null)
 		{
-			// TODO: Change of GL context?
-
-			if (shader.__context == null)
+			if (shader.__context != __context3D)
 			{
+				// Shared between windows: take the program and locations of the context drawing now
+				if (shader.__context != null) shader.program = null;
 				shader.__context = __context3D;
 				shader.__init();
 			}
@@ -557,10 +556,10 @@ class OpenGLRenderer extends DisplayObjectRenderer
 	{
 		if (shader != null)
 		{
-			// TODO: Change of GL context?
-
-			if (shader.__context == null)
+			if (shader.__context != __context3D)
 			{
+				// Shared between windows: take the program and locations of the context drawing now
+				if (shader.__context != null) shader.program = null;
 				shader.__context = __context3D;
 				shader.__init();
 			}
@@ -576,10 +575,10 @@ class OpenGLRenderer extends DisplayObjectRenderer
 	{
 		if (shader != null)
 		{
-			// TODO: Change of GL context?
-
-			if (shader.__context == null)
+			if (shader.__context != __context3D)
 			{
+				// Shared between windows: take the program and locations of the context drawing now
+				if (shader.__context != null) shader.program = null;
 				shader.__context = __context3D;
 				shader.__init();
 			}
